@@ -1,19 +1,28 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any, List
+import pytz
 
-async def calculate_monthly_revenue(property_id: str, month: int, year: int, db_session=None) -> Decimal:
+async def calculate_monthly_revenue(property_id: str, month: int, year: int, db_session=None, timezone: str = 'UTC') -> Decimal:
     """
-    Calculates revenue for a specific month.
+    Calculates revenue for a specific month, using the property's local timezone
+    to determine month boundaries before converting to UTC for the DB query.
     """
 
-    start_date = datetime(year, month, 1)
+    tz = pytz.timezone(timezone)
+
+    # Build month boundaries in the property's local timezone
+    local_start = tz.localize(datetime(year, month, 1))
     if month < 12:
-        end_date = datetime(year, month + 1, 1)
+        local_end = tz.localize(datetime(year, month + 1, 1))
     else:
-        end_date = datetime(year + 1, 1, 1)
-        
-    print(f"DEBUG: Querying revenue for {property_id} from {start_date} to {end_date}")
+        local_end = tz.localize(datetime(year + 1, 1, 1))
+
+    # Convert to UTC so the comparison is correct against TIMESTAMP WITH TIME ZONE columns
+    start_date = local_start.astimezone(pytz.utc)
+    end_date = local_end.astimezone(pytz.utc)
+
+    print(f"DEBUG: Querying revenue for {property_id} (tz={timezone}) from {start_date} to {end_date}")
 
     # SQL Simulation (This would be executed against the actual DB)
     query = """
